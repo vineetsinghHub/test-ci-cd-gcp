@@ -1,5 +1,5 @@
 steps:
-  - name: 'gradle:8.14.3-jdk17'
+  - name: 'gradle:8.14.3-jdk21'
     args: ['./gradlew', 'build']
 
   - name: 'gcr.io/cloud-builders/docker'
