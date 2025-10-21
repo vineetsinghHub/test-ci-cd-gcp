@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/cloud-builders/mvn'
+    args: ['clean', 'package']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'asia-south1-docker.pkg.dev/$PROJECT_ID/dockerapp-1/dockerapp:$SHORT_SHA',
+      '.'
+    ]
+
+images:
+  - 'asia-south1-docker.pkg.dev/$PROJECT_ID/dockerapp-1/dockerapp:$SHORT_SHA'
