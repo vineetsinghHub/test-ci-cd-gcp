@@ -1,9 +1,9 @@
 steps:
   - name: 'gradle:8.14.3-jdk21'
     args: ['./gradlew','clean','build','-x','test']
-    volumes:
-      - name: 'gradle-cache'
-        path: /root/.gradle
+#    volumes:
+#      - name: 'gradle-cache'
+#        path: /root/.gradle
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -11,9 +11,9 @@ steps:
       '.'
     ]
       # Optional Docker cache inside this step
-    volumes:
-      - name: 'docker-cache'
-        path: /root/.docker
+#    volumes:
+#      - name: 'docker-cache'
+#        path: /root/.docker-cache
 
 
 images:
