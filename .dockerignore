@@ -1,0 +1,9 @@
+.git
+#build
+.gradle
+*.log
+# Keep build/libs so Docker can copy the JAR
+build/tmp
+build/classes
+build/reports
+build/test-results
