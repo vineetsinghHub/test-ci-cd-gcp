@@ -10,13 +10,14 @@ steps:
       '-t', 'asia-south1-docker.pkg.dev/$PROJECT_ID/dockerapp-1/dockerapp:$SHORT_SHA',
       '.'
     ]
+      # Optional Docker cache inside this step
+    volumes:
+      - name: 'docker-cache'
+        path: /root/.docker
+
 
 images:
   - 'asia-south1-docker.pkg.dev/$PROJECT_ID/dockerapp-1/dockerapp:$SHORT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
-volumes:
-  - name: 'docker-cache'
-    path: /root/.docker
