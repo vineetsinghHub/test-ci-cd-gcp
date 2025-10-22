@@ -9,7 +9,7 @@ FROM eclipse-temurin:21-jdk
 WORKDIR /app
 
 # Copy the built jar from previous stage
-COPY build/libs/*.jar app.jar
+COPY build/libs/test_ci-0.0.1-SNAPSHOT.jar app.jar
 
 # Expose the port your app runs on
 EXPOSE 8081
