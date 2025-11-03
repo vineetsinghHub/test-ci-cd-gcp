@@ -5,6 +5,8 @@ pipeline {
         EC2_USER = 'ubuntu'
         EC2_IP = '65.1.8.69'
         REMOTE_DIR = '/home/ubuntu/app'
+        LOCAL_JAR = 'build/libs/test_ci-0.0.1-SNAPSHOT.jar'
+        REMOTE_JAR = 'app.jar'
     }
 
     stages {
@@ -21,22 +23,24 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-deploy-key',
                         keyFileVariable: 'KEYFILE')]) {
                     powershell '''
-                        Write-Host "Copying jar to EC2..."
+                        Write-Host "Copying JAR to EC2..."
 
-                        # Use your actual built JAR name
-                        $JAR_PATH = "build/libs/test_ci-0.0.1-SNAPSHOT.jar"
                         $key = $env:KEYFILE.Replace('\\', '/')
+                        $jarPath = "build/libs/test_ci-0.0.1-SNAPSHOT.jar"
 
-                        if (-Not (Test-Path $JAR_PATH)) {
-                            Write-Error "❌ JAR file not found at $JAR_PATH"
+                        if (-Not (Test-Path $jarPath)) {
+                            Write-Error "❌ JAR file not found: $jarPath"
                             exit 1
                         }
 
-                        # Copy jar to EC2
-                        scp -o StrictHostKeyChecking=no -o "StrictModes=no" -i "$key" "$JAR_PATH" ubuntu@65.1.8.69:/home/ubuntu/app/app.jar
+                        # Fix file permissions (OpenSSH for Windows requirement)
+                        icacls $key /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+
+                        # Copy the JAR to EC2
+                        scp -o StrictHostKeyChecking=no -i "$key" "$jarPath" ${env:EC2_USER}@${env:EC2_IP}:${env:REMOTE_DIR}/${env:REMOTE_JAR}
 
                         Write-Host "Restarting app remotely..."
-                        ssh -o StrictHostKeyChecking=no -o "StrictModes=no" -i "$key" ubuntu@65.1.8.69 "pkill -f app.jar || true && nohup java -jar /home/ubuntu/app/app.jar > /home/ubuntu/app/app.log 2>&1 &"
+                        ssh -o StrictHostKeyChecking=no -i "$key" ${env:EC2_USER}@${env:EC2_IP} "pkill -f ${env:REMOTE_JAR} || true && nohup java -jar ${env:REMOTE_DIR}/${env:REMOTE_JAR} > ${env:REMOTE_DIR}/app.log 2>&1 &"
 
                         Write-Host "✅ Deployment completed successfully."
                     '''
