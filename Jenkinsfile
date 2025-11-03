@@ -4,7 +4,6 @@ pipeline {
     environment {
         EC2_USER = 'ubuntu'
         EC2_IP = '65.1.8.69'
-        KEY_PATH = 'D:/keys/jenkins-aws.ppk'
         APP_NAME = 'myapp.jar'
         REMOTE_DIR = '/home/ubuntu/app'
     }
@@ -12,23 +11,25 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                // Build your app locally
-                sh './gradlew clean build -x test'
+                echo "Building application..."
+                bat 'gradlew clean build -x test'
             }
         }
 
         stage('Deploy') {
             steps {
-                // Copy artifact to EC2
-                sh "scp -i ${KEY_PATH} build/libs/${APP_NAME} ${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/"
+                echo "Deploying to EC2..."
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-deploy-key',
+                        keyFileVariable: 'KEYFILE')]) {
+                    powershell '''
+                        Write-Host "Copying jar to EC2..."
+                        $key = $env:KEYFILE.Replace('\\', '/')
+                        scp -o StrictHostKeyChecking=no -i "$key" build/libs/myapp.jar ubuntu@65.1.8.69:/home/ubuntu/app/
 
-                // Restart app on EC2
-                sh """
-                   ssh -i ${KEY_PATH} ${EC2_USER}@${EC2_IP} << EOF
-                   pkill -f ${APP_NAME} || true
-                   nohup java -jar ${REMOTE_DIR}/${APP_NAME} > ${REMOTE_DIR}/app.log 2>&1 &
-                   EOF
-                """
+                        Write-Host "Restarting app remotely..."
+                        ssh -o StrictHostKeyChecking=no -i "$key" ubuntu@65.1.8.69 "pkill -f myapp.jar || true && nohup java -jar /home/ubuntu/app/myapp.jar > /home/ubuntu/app/app.log 2>&1 &"
+                    '''
+                }
             }
         }
     }
