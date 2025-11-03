@@ -23,29 +23,32 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-deploy-key',
                         keyFileVariable: 'KEYFILE')]) {
                     powershell '''
-                        Write-Host "Copying JAR to EC2..."
+                Write-Host "Copying JAR to EC2..."
 
-                        $key = $env:KEYFILE.Replace('\\', '/')
-                        $jarPath = "build/libs/test_ci-0.0.1-SNAPSHOT.jar"
+                $key = $env:KEYFILE.Replace('\\', '/')
+                $jarPath = "build/libs/test_ci-0.0.1-SNAPSHOT.jar"
 
-                        if (-Not (Test-Path $jarPath)) {
-                            Write-Error "❌ JAR file not found: $jarPath"
-                            exit 1
-                        }
+                if (-Not (Test-Path $jarPath)) {
+                    Write-Error "❌ JAR file not found: $jarPath"
+                    exit 1
+                }
 
-                        # Fix file permissions (OpenSSH for Windows requirement)
-                        icacls $key /inheritance:r /grant:r "$($env:USERNAME):R" | Out-Null
+                Write-Host "Fixing key permissions..."
+                # Remove all permissions and grant only Jenkins service account (SYSTEM)
+                icacls $key /inheritance:r /remove:g "BUILTIN\\Users" /T
+                icacls $key /grant:r "SYSTEM:R" /T
 
-                        # Copy the JAR to EC2
-                        scp -o StrictHostKeyChecking=no -i "$key" "$jarPath" ${env:EC2_USER}@${env:EC2_IP}:${env:REMOTE_DIR}/${env:REMOTE_JAR}
+                Write-Host "Copying file via SCP..."
+                scp -o StrictHostKeyChecking=no -i "$key" "$jarPath" ${env:EC2_USER}@${env:EC2_IP}:${env:REMOTE_DIR}/${env:REMOTE_JAR}
 
-                        Write-Host "Restarting app remotely..."
-                        ssh -o StrictHostKeyChecking=no -i "$key" ${env:EC2_USER}@${env:EC2_IP} "pkill -f ${env:REMOTE_JAR} || true && nohup java -jar ${env:REMOTE_DIR}/${env:REMOTE_JAR} > ${env:REMOTE_DIR}/app.log 2>&1 &"
+                Write-Host "Restarting app remotely..."
+                ssh -o StrictHostKeyChecking=no -i "$key" ${env:EC2_USER}@${env:EC2_IP} "pkill -f ${env:REMOTE_JAR} || true && nohup java -jar ${env:REMOTE_DIR}/${env:REMOTE_JAR} > ${env:REMOTE_DIR}/app.log 2>&1 &"
 
-                        Write-Host "✅ Deployment completed successfully."
-                    '''
+                Write-Host "✅ Deployment completed successfully."
+            '''
                 }
             }
         }
+
     }
 }
