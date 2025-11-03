@@ -4,7 +4,6 @@ pipeline {
     environment {
         EC2_USER = 'ubuntu'
         EC2_IP = '65.1.8.69'
-        APP_NAME = 'myapp.jar'
         REMOTE_DIR = '/home/ubuntu/app'
     }
 
@@ -23,11 +22,23 @@ pipeline {
                         keyFileVariable: 'KEYFILE')]) {
                     powershell '''
                         Write-Host "Copying jar to EC2..."
+
+                        # Use your actual built JAR name
+                        $JAR_PATH = "build/libs/test_ci-0.0.1-SNAPSHOT.jar"
                         $key = $env:KEYFILE.Replace('\\', '/')
-                        scp -o StrictHostKeyChecking=no -i "$key" build/libs/myapp.jar ubuntu@65.1.8.69:/home/ubuntu/app/
+
+                        if (-Not (Test-Path $JAR_PATH)) {
+                            Write-Error "❌ JAR file not found at $JAR_PATH"
+                            exit 1
+                        }
+
+                        # Copy jar to EC2
+                        scp -o StrictHostKeyChecking=no -o "StrictModes=no" -i "$key" "$JAR_PATH" ubuntu@65.1.8.69:/home/ubuntu/app/app.jar
 
                         Write-Host "Restarting app remotely..."
-                        ssh -o StrictHostKeyChecking=no -i "$key" ubuntu@65.1.8.69 "pkill -f myapp.jar || true && nohup java -jar /home/ubuntu/app/myapp.jar > /home/ubuntu/app/app.log 2>&1 &"
+                        ssh -o StrictHostKeyChecking=no -o "StrictModes=no" -i "$key" ubuntu@65.1.8.69 "pkill -f app.jar || true && nohup java -jar /home/ubuntu/app/app.jar > /home/ubuntu/app/app.log 2>&1 &"
+
+                        Write-Host "✅ Deployment completed successfully."
                     '''
                 }
             }
